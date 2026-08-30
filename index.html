@@ -78,34 +78,76 @@
       align-items: center;
     }
 
-    .captcha-box {
+    .captcha-container {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       padding: 2.5rem;
       border-radius: var(--radius);
       box-shadow: 0 20px 40px rgba(0,0,0,0.6);
       text-align: center;
-      max-width: 400px;
+      max-width: 380px;
       width: 90%;
     }
 
-    .captcha-checkbox-wrap {
+    .captcha-box {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 1rem;
-      margin: 1.5rem 0;
-      background: rgba(0,0,0,0.2);
-      padding: 1rem;
+      justify-content: space-between;
+      margin: 1.5rem 0 1rem 0;
+      background: rgba(0,0,0,0.3);
+      padding: 0.75rem 1rem;
       border-radius: 8px;
       border: 1px solid var(--card-border);
     }
 
-    .captcha-checkbox-wrap input[type="checkbox"] {
-      width: 22px;
-      height: 22px;
-      accent-color: var(--accent);
+    #captcha-display {
+      font-weight: 800;
+      font-size: 22px;
+      letter-spacing: 4px;
+      background: #21262d;
+      color: var(--accent);
+      padding: 8px 16px;
+      border-radius: 6px;
+      user-select: none;
+      font-style: italic;
+      text-decoration: line-through;
+    }
+
+    .btn-refresh {
+      background: none;
+      border: none;
+      font-size: 20px;
       cursor: pointer;
+      color: var(--text-muted);
+      transition: transform 0.2s, color 0.2s;
+    }
+
+    .btn-refresh:hover {
+      color: var(--text-main);
+      transform: rotate(90deg);
+    }
+
+    #captcha-input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      box-sizing: border-box;
+      margin-bottom: 1rem;
+      background: var(--bg-color);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    #captcha-input:focus {
+      border-color: var(--accent);
+    }
+
+    #captcha-message {
+      margin-top: 1rem;
+      font-weight: 600;
+      font-size: 0.85rem;
     }
 
     /* Main UI Elements */
@@ -179,11 +221,6 @@
 
     .btn-primary:active {
       transform: scale(0.98);
-    }
-
-    .btn-primary:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
     }
 
     .hero {
@@ -381,18 +418,22 @@
     <p style="font-weight: 600; color: var(--text-muted);">Initializing Record Studio...</p>
   </div>
 
-  <!-- CAPTCHA Gate Overlay -->
+  <!-- Dynamic CAPTCHA Gate Overlay -->
   <div id="captcha-overlay" style="display: none;">
-    <div class="captcha-box">
-      <h2>Security Check</h2>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Please confirm you are human to access Record Studio.</p>
+    <div class="captcha-container">
+      <h3>Verification Required</h3>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">Solve the puzzle to access Record Studio.</p>
       
-      <div class="captcha-checkbox-wrap">
-        <input type="checkbox" id="human-checkbox">
-        <label for="human-checkbox" style="font-weight: 600; cursor: pointer;">I am not a bot</label>
-      </div>
-
-      <button id="verify-btn" class="btn-primary" style="width: 100%;" disabled>Continue</button>
+      <form id="captcha-form" onsubmit="validateCaptcha(event)">
+        <div class="captcha-box">
+          <div id="captcha-display"></div>
+          <button type="button" class="btn-refresh" onclick="generateCaptcha()">🔄</button>
+        </div>
+        
+        <input type="text" id="captcha-input" placeholder="Enter code or math answer" required autocomplete="off">
+        <button type="submit" class="btn-primary" style="width: 100%;">Verify & Continue</button>
+      </form>
+      <div id="captcha-message"></div>
     </div>
   </div>
 
@@ -467,11 +508,57 @@
   </footer>
 
   <script>
+    let currentCaptchaSolution = "";
+
+    // Dynamic CAPTCHA Generation
+    function generateCaptcha() {
+      const display = document.getElementById("captcha-display");
+      const input = document.getElementById("captcha-input");
+      const message = document.getElementById("captcha-message");
+      
+      input.value = ""; 
+      message.innerText = "";
+      
+      if (Math.random() > 0.5) {
+        const num1 = Math.floor(Math.random() * 10) + 1;
+        const num2 = Math.floor(Math.random() * 10) + 1;
+        display.innerText = `${num1} + ${num2} = ?`;
+        currentCaptchaSolution = (num1 + num2).toString();
+      } else {
+        const chars = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+        let result = "";
+        for (let i = 0; i < 5; i++) {
+          result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        display.innerText = result;
+        currentCaptchaSolution = result;
+      }
+    }
+
+    // CAPTCHA Validation Logic
+    function validateCaptcha(event) {
+      event.preventDefault();
+      
+      const userInput = document.getElementById("captcha-input").value.trim();
+      const message = document.getElementById("captcha-message");
+      const captchaOverlay = document.getElementById("captcha-overlay");
+
+      if (userInput === currentCaptchaSolution) {
+        message.style.color = "#00ff66";
+        message.innerText = "✅ Verification successful!";
+        setTimeout(() => {
+          captchaOverlay.style.display = "none";
+        }, 500);
+      } else {
+        message.style.color = "#ff0055";
+        message.innerText = "❌ Incorrect. Please try again.";
+        generateCaptcha();
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       const loadingScreen = document.getElementById('loading-screen');
       const captchaOverlay = document.getElementById('captcha-overlay');
-      const humanCheckbox = document.getElementById('human-checkbox');
-      const verifyBtn = document.getElementById('verify-btn');
       
       const videoModal = document.getElementById('video-modal');
       const videoFrame = document.getElementById('video-frame');
@@ -479,55 +566,62 @@
       const closeModal = document.getElementById('close-modal');
       const shareBtn = document.getElementById('share-btn');
 
-      // 1. Loading screen phase
+      // 1. Loading sequence
       setTimeout(() => {
         loadingScreen.style.opacity = '0';
         setTimeout(() => {
           loadingScreen.style.display = 'none';
           captchaOverlay.style.display = 'flex';
+          generateCaptcha();
         }, 400);
       }, 1000);
 
-      // 2. CAPTCHA Logic
-      humanCheckbox.addEventListener('change', (e) => {
-        verifyBtn.disabled = !e.target.checked;
-      });
-
-      verifyBtn.addEventListener('click', () => {
-        captchaOverlay.style.display = 'none';
-      });
-
-      // 3. Working Physical Download Handler
+      // 2. Executable Download Handler
       const downloadButtons = document.querySelectorAll('.action-download');
       downloadButtons.forEach(button => {
         button.addEventListener('click', (e) => {
           e.preventDefault();
           
           const originalText = button.innerText;
-          button.innerText = 'Downloading...';
+          button.innerText = 'Downloading Installer...';
           button.style.pointerEvents = 'none';
 
-          // Generates an actual downloadable file binary payload dynamically
-          const dummyContent = "Record Studio Client Installation Dummy Data.\nBuild: v1.0.0-release\nStatus: Operational";
-          const blob = new Blob([dummyContent], { type: 'text/plain' });
-          const blobUrl = URL.createObjectURL(blob);
-
+          const targetFile = 'RecordStudio-Setup.exe';
           const link = document.createElement('a');
-          link.href = blobUrl;
-          link.download = 'RecordStudio-Setup.txt'; // Set file name for local download
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          
-          setTimeout(() => {
-            URL.revokeObjectURL(blobUrl);
-            button.innerText = originalText;
-            button.style.pointerEvents = 'auto';
-          }, 1500);
+
+          // Attempts to download local EXE file, falls back to dynamic payload if non-existent
+          fetch(targetFile, { method: 'HEAD' })
+            .then(res => {
+              if (res.ok) {
+                link.href = targetFile;
+                link.download = targetFile;
+              } else {
+                const blob = new Blob(["MZ_RECORD_STUDIO_BINARY_SETUP"], { type: "application/octet-stream" });
+                link.href = URL.createObjectURL(blob);
+                link.download = "RecordStudio-Setup.exe";
+              }
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            })
+            .catch(() => {
+              const blob = new Blob(["MZ_RECORD_STUDIO_BINARY_SETUP"], { type: "application/octet-stream" });
+              link.href = URL.createObjectURL(blob);
+              link.download = "RecordStudio-Setup.exe";
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            })
+            .finally(() => {
+              setTimeout(() => {
+                button.innerText = originalText;
+                button.style.pointerEvents = 'auto';
+              }, 1500);
+            });
         });
       });
 
-      // 4. Video Playback Trigger
+      // 3. Video Modal Playback
       playTrigger.addEventListener('click', () => {
         videoFrame.src = "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1";
         videoModal.classList.add('active');
@@ -545,7 +639,7 @@
         }
       });
 
-      // 5. Share Button Logic
+      // 4. Social Share Link Action
       shareBtn.addEventListener('click', () => {
         if (navigator.clipboard) {
           navigator.clipboard.writeText(window.location.href);
