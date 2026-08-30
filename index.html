@@ -26,6 +26,10 @@
       font-family: 'Inter', sans-serif;
     }
 
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
       background-color: var(--bg-color);
       color: var(--text-main);
@@ -35,7 +39,76 @@
       overflow-x: hidden;
     }
 
-    /* Header Nav */
+    /* Loading Screen Overlay */
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-color);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 1.5rem;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--card-border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* CAPTCHA Overlay */
+    #captcha-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 14, 20, 0.95);
+      backdrop-filter: blur(8px);
+      z-index: 900;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .captcha-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 2.5rem;
+      border-radius: var(--radius);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .captcha-checkbox-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin: 1.5rem 0;
+      background: rgba(0,0,0,0.2);
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+
+    .captcha-checkbox-wrap input[type="checkbox"] {
+      width: 22px;
+      height: 22px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* Main UI Elements */
     header {
       display: flex;
       justify-content: space-between;
@@ -56,6 +129,7 @@
       font-weight: 800;
       font-size: 1.25rem;
       letter-spacing: -0.5px;
+      cursor: pointer;
     }
 
     .brand-icon {
@@ -94,6 +168,9 @@
       transition: background 0.2s, transform 0.1s;
       border: none;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .btn-primary:hover {
@@ -104,7 +181,6 @@
       transform: scale(0.98);
     }
 
-    /* Hero Section */
     .hero {
       display: flex;
       flex-direction: column;
@@ -142,7 +218,6 @@
       line-height: 1.6;
     }
 
-    /* Clip Player Simulation */
     .app-preview {
       max-width: 1000px;
       width: 90%;
@@ -208,10 +283,14 @@
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      background: #333;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: white;
     }
 
-    /* Features Grid */
     .features {
       max-width: 1100px;
       margin: 0 auto 6rem auto;
@@ -239,7 +318,6 @@
       font-size: 0.95rem;
     }
 
-    /* Footer */
     footer {
       margin-top: auto;
       border-top: 1px solid var(--card-border);
@@ -247,6 +325,41 @@
       text-align: center;
       color: var(--text-muted);
       font-size: 0.85rem;
+    }
+
+    /* Video Player Modal */
+    #video-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 1100;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #video-modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      position: relative;
+      width: 80%;
+      max-width: 900px;
+      aspect-ratio: 16/9;
+      background: #000;
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      color: white;
+      font-size: 2rem;
+      cursor: pointer;
+      z-index: 10;
     }
 
     @media (max-width: 768px) {
@@ -257,8 +370,34 @@
 </head>
 <body>
 
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <p style="font-weight: 600; color: var(--text-muted);">Initializing Record Studio...</p>
+  </div>
+
+  <div id="captcha-overlay" style="display: none;">
+    <div class="captcha-box">
+      <h2>Security Check</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Please confirm you are human to access Record Studio.</p>
+      
+      <div class="captcha-checkbox-wrap">
+        <input type="checkbox" id="human-checkbox">
+        <label for="human-checkbox" style="font-weight: 600; cursor: pointer;">I am not a bot</label>
+      </div>
+
+      <button id="verify-btn" class="btn-primary" style="width: 100%;" disabled>Continue</button>
+    </div>
+  </div>
+
+  <div id="video-modal">
+    <div class="modal-content">
+      <span class="close-modal" id="close-modal">&times;</span>
+      <iframe id="video-frame" width="100%" height="100%" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+  </div>
+
   <header>
-    <div class="brand">
+    <div class="brand" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
       <div class="brand-icon"></div>
       Record Studio
     </div>
@@ -267,7 +406,7 @@
       <a href="#explore">Explore Clips</a>
       <a href="#download">Download App</a>
     </nav>
-    <button class="btn-primary">Get Started</button>
+    <button class="btn-primary action-download">Get Started</button>
   </header>
 
   <main>
@@ -275,24 +414,24 @@
       <div class="hero-badge">Record Studio v1.0</div>
       <h1>Clip your best gaming moments seamlessly.</h1>
       <p>High-quality, zero-lag background recording built for gamers. Capture, edit, and instantly share your clips across your social network.</p>
-      <a href="#download" class="btn-primary" style="font-size: 1.1rem; padding: 1rem 2rem;">Download for Windows</a>
+      <button class="btn-primary action-download" style="font-size: 1.1rem; padding: 1rem 2rem;">Download for Windows</button>
     </section>
 
-    <section class="app-preview">
+    <section class="app-preview" id="explore">
       <div class="viewport-mock">
-        <div class="play-trigger">
+        <div class="play-trigger" id="play-trigger">
           <div class="play-icon"></div>
         </div>
       </div>
       <div class="preview-bar">
         <div class="user-info">
-          <div class="avatar"></div>
+          <div class="avatar">A</div>
           <div>
             <div style="font-weight: 600;">AceClutches_99</div>
             <div style="font-size: 0.8rem; color: var(--text-muted);">VALORANT • 1080p 60fps</div>
           </div>
         </div>
-        <button class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Share Clip</button>
+        <button id="share-btn" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Share Clip</button>
       </div>
     </section>
 
@@ -312,9 +451,89 @@
     </section>
   </main>
 
-  <footer>
-    &copy; 2026 Record Studio. All rights reserved. Built for performance.
+  <footer id="download">
+    <p style="margin-bottom: 1rem;">Ready to capture your clips?</p>
+    <button class="btn-primary action-download" style="margin-bottom: 1.5rem;">Download Now</button>
+    <div>&copy; 2026 Record Studio. All rights reserved. Built for performance.</div>
   </footer>
 
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const loadingScreen = document.getElementById('loading-screen');
+      const captchaOverlay = document.getElementById('captcha-overlay');
+      const humanCheckbox = document.getElementById('human-checkbox');
+      const verifyBtn = document.getElementById('verify-btn');
+      
+      const videoModal = document.getElementById('video-modal');
+      const videoFrame = document.getElementById('video-frame');
+      const playTrigger = document.getElementById('play-trigger');
+      const closeModal = document.getElementById('close-modal');
+      const shareBtn = document.getElementById('share-btn');
+
+      // 1. Loading screen phase
+      setTimeout(() => {
+        loadingScreen.style.opacity = '0';
+        setTimeout(() => {
+          loadingScreen.style.display = 'none';
+          // Show CAPTCHA verification check after load
+          captchaOverlay.style.display = 'flex';
+        }, 400);
+      }, 1200);
+
+      // 2. CAPTCHA Check Logic
+      humanCheckbox.addEventListener('change', (e) => {
+        verifyBtn.disabled = !e.target.checked;
+      });
+
+      verifyBtn.addEventListener('click', () => {
+        captchaOverlay.style.display = 'none';
+      });
+
+      // 3. Functional Download Triggers
+      const downloadButtons = document.querySelectorAll('.action-download');
+      downloadButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const originalText = button.innerText;
+          button.innerText = 'Preparing Download...';
+          button.style.pointerEvents = 'none';
+          
+          setTimeout(() => {
+            alert('Starting Record Studio Setup v1.0 download...');
+            button.innerText = originalText;
+            button.style.pointerEvents = 'auto';
+          }, 1000);
+        });
+      });
+
+      // 4. Video Playback Trigger
+      playTrigger.addEventListener('click', () => {
+        // Embed sample gameplay video source
+        videoFrame.src = "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1";
+        videoModal.classList.add('active');
+      });
+
+      closeModal.addEventListener('click', () => {
+        videoModal.classList.remove('active');
+        videoFrame.src = "";
+      });
+
+      videoModal.addEventListener('click', (e) => {
+        if (e.target === videoModal) {
+          videoModal.classList.remove('active');
+          videoFrame.src = "";
+        }
+      });
+
+      // 5. Share Button Action
+      shareBtn.addEventListener('click', () => {
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(window.location.href);
+          alert('Clip link copied to clipboard!');
+        } else {
+          alert('Link ready to share: ' + window.location.href);
+        }
+      });
+    });
+  </script>
 </body>
 </html>
